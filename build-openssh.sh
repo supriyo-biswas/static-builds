@@ -84,6 +84,7 @@ sanity_check() {
 
 build_platform() {
     docker run \
+        -it \
         --rm \
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
@@ -95,6 +96,7 @@ build_platform() {
     . ./constants.sh
     for image in $TEST_SSH_IMAGES; do
         docker run \
+            -it \
             --rm \
             --platform "$1" \
             -v "$PWD:/work:ro,delegated" \

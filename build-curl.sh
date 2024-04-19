@@ -77,6 +77,7 @@ sanity_check() {
 
 build_platform() {
     docker run \
+        -it \
         --rm \
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
@@ -92,6 +93,7 @@ build_platform() {
 
     for image in $TEST_IMAGES; do
         docker run \
+            -it \
             --rm \
             --platform "$1" \
             -v "$PWD:/work:ro,delegated" \
@@ -105,10 +107,10 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")"
-    VERSION=$(wget -qO - https://api.github.com/repos/curl/curl/releases | jq -r '.[0].name')
+    VERSION=8.7.1
 
     mkdir -p downloads releases
-    wget -nv -N -P downloads "https://curl.haxx.se/download/curl-$VERSION.tar.gz"
+    wget -nv -N -P downloads "https://curl.se/download/curl-$VERSION.tar.gz"
 
     build_platform linux/amd64
     build_platform linux/arm64
