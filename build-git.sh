@@ -182,7 +182,7 @@ main() {
     wget -nv -N -P downloads \
         "https://www.kernel.org/pub/software/scm/git/git-$VERSION.tar.gz"
 
-    # build_platform linux/amd64
+    build_platform linux/amd64
     build_platform linux/arm64
 }
 
