@@ -53,7 +53,7 @@ index 000000000..5a148e909
 +        }
 +
 +        int scount = 0;
-+        while (len > 0)
++        while (len >= 0)
 +        {
 +            if (base_dir[len] == '/')
 +            {
