@@ -12,13 +12,20 @@ build_task() {
     apk add \
         build-base \
         clang \
+        linux-headers \
         openssl-dev \
         openssl-libs-static \
         zlib-dev \
-        zlib-static
+        zlib-static \
+        makedepend \
+        patch
 
     tar -xf "/work/downloads/openssh-$VERSION.tar.gz"
     cd "/openssh-$VERSION"
+
+    patch -p1 < /work/openssh/patch.diff
+    # shellcheck disable=SC2035
+    makedepend -w1000 -Y. -f .depend *.c 2>/dev/null
 
     PREFIX="/opt/openssh-$VERSION"
 
@@ -40,6 +47,11 @@ build_task() {
         exit 1
     fi
 
+    if [ -n "$(find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec grep -a "$PREFIX" {} \;)" ]; then
+        echo "Binary contains references to $PREFIX"
+        exit 1
+    fi
+
     find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec strip {} +
     rm "$PREFIX/libexec/sftp-server"
 
@@ -51,6 +63,8 @@ sanity_check() {
     ssh="$install_dir/bin/ssh"
     ssh_keyscan="$install_dir/bin/ssh-keyscan"
     ssh_keygen="$install_dir/bin/ssh-keygen"
+    sftp="$install_dir/bin/sftp"
+    scp="$install_dir/bin/scp"
 
     tar -C "$install_dir" -xf "/releases/openssh-$VERSION-linux-$(uname -m).tar.gz"
     if ! "$ssh" -V 2>&1 | grep -q "^OpenSSH_$VERSION, OpenSSL "; then
@@ -67,7 +81,7 @@ sanity_check() {
     chmod 400 ~/.ssh/authorized_keys
 
     apt-get update -qq
-    apt-get install -qq -y openssh-server
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends openssh-server
     mkdir -p /run/sshd
     /usr/sbin/sshd
     sleep 3
@@ -76,8 +90,29 @@ sanity_check() {
 
     # Kerberos/GSSAPI is not available in our build
     unlink /etc/ssh/ssh_config
-    if ! timeout 5 "$ssh" root@localhost uptime | grep -q "load average"; then
+    if ! (timeout 5 "$ssh" root@localhost uptime | grep -q "load average"); then
         echo "ssh failed to connect to localhost"
+        exit 1
+    fi
+
+    if ! (echo "get /bin/cp /tmp/cp1" | "$sftp" root@localhost); then
+        echo "sftp failed to copy"
+        exit 1
+    fi
+
+    target_file_checksum=$(sha256sum /bin/cp | cut -d' ' -f1)
+    if [ "$target_file_checksum" != "$(sha256sum /tmp/cp1 | cut -d ' ' -f1)" ]; then
+        echo "sftp copy did not work properly"
+        exit 1
+    fi
+
+    if ! "$scp" root@localhost:/bin/cp /tmp/cp2; then
+        echo "scp failed to copy"
+        exit 1
+    fi
+
+    if [ "$target_file_checksum" != "$(sha256sum /tmp/cp2 | cut -d ' ' -f1)" ]; then
+        echo "scp copy did not work properly"
         exit 1
     fi
 }
@@ -90,10 +125,10 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/build-openssh.sh build_task
+        alpine:3 /work/openssh/build.sh build_task
 
     # shellcheck disable=SC1091
-    . ./constants.sh
+    . ./common/constants.sh
     for image in $TEST_SSH_IMAGES; do
         docker run \
             -it \
@@ -102,12 +137,12 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/build-openssh.sh sanity_check
+            "$image" /work/openssh/build.sh sanity_check
     done
 }
 
 main() {
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")/.."
     VERSION=9.7p1
 
     mkdir -p downloads releases

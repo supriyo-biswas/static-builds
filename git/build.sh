@@ -108,11 +108,7 @@ build_task() {
 
     find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec file --mime-type {} + | \
         awk '$2 == "application/x-executable" { print substr($1,0,length($1)-1); }' | \
-        xargs -r sed -ri "s:$PREFIX/share/git-core/templates:share/git-core/templates$nulls:g"
-
-    find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec file --mime-type {} + | \
-        awk '$2 == "application/x-executable" { print substr($1,0,length($1)-1); }' | \
-        xargs -r sed -ri "s:$PREFIX/libexec/git-core:libexec/git-core$nulls:g"
+        xargs -r sed -ri "s:$PREFIX/([a-z/-]+):\1$nulls:g"
 
     tar --numeric-owner -C "$PREFIX" -czf "$output_file" .
 }
@@ -151,10 +147,10 @@ build_platform() {
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
         -e CURL_VERSION="$CURL_VERSION" \
-        alpine:3 /work/build-git.sh build_task
+        alpine:3 /work/git/build.sh build_task
 
     # shellcheck disable=SC1091
-    . ./constants.sh
+    . ./common/constants.sh
     wget -nv -N -P downloads https://github.com/certifi/python-certifi/raw/master/certifi/cacert.pem
 
     for image in $TEST_IMAGES; do
@@ -165,12 +161,12 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/build-git.sh sanity_check
+            "$image" /work/git/build.sh sanity_check
     done
 }
 
 main() {
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")/.."
     VERSION=2.44.0
     CURL_VERSION=8.7.1
 

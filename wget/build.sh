@@ -70,10 +70,10 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/build-wget.sh build_task
+        alpine:3 /work/wget/build.sh build_task
 
     # shellcheck disable=SC1091
-    . ./constants.sh
+    . ./common/constants.sh
     REF_SHA256=$(wget -qO - "$REF_URL" | sha256sum | cut -d' ' -f1)
 
     wget -nv -N -P downloads https://github.com/certifi/python-certifi/raw/master/certifi/cacert.pem
@@ -88,12 +88,12 @@ build_platform() {
             -e "REF_URL=$REF_URL" \
             -e "REF_SHA256=$REF_SHA256" \
             -e "VERSION=$VERSION" \
-            "$image" /work/build-wget.sh sanity_check
+            "$image" /work/wget/build.sh sanity_check
     done
 }
 
 main() {
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")/.."
     VERSION=1.24.5
 
     mkdir -p downloads releases

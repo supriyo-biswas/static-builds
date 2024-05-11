@@ -18,4 +18,5 @@ export TEST_SSH_IMAGES="
     ubuntu:devel
     debian:latest
     debian:oldstable
+    debian:testing
 "

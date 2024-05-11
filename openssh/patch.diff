@@ -1,0 +1,174 @@
+diff --git a/Makefile.in b/Makefile.in
+index 1efe11f6f..fce3bf16e 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -33,12 +33,6 @@ TEST_SHELL=@TEST_SHELL@
+ BUILDDIR=@abs_top_builddir@
+
+ PATHS= -DSSHDIR=\"$(sysconfdir)\" \
+-	-D_PATH_SSH_PROGRAM=\"$(SSH_PROGRAM)\" \
+-	-D_PATH_SSH_ASKPASS_DEFAULT=\"$(ASKPASS_PROGRAM)\" \
+-	-D_PATH_SFTP_SERVER=\"$(SFTP_SERVER)\" \
+-	-D_PATH_SSH_KEY_SIGN=\"$(SSH_KEYSIGN)\" \
+-	-D_PATH_SSH_PKCS11_HELPER=\"$(SSH_PKCS11_HELPER)\" \
+-	-D_PATH_SSH_SK_HELPER=\"$(SSH_SK_HELPER)\" \
+ 	-D_PATH_SSH_PIDDIR=\"$(piddir)\" \
+ 	-D_PATH_PRIVSEP_CHROOT_DIR=\"$(PRIVSEP_PATH)\"
+
+@@ -111,7 +105,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
+ 	kexgexc.o kexgexs.o \
+ 	kexsntrup761x25519.o sntrup761.o kexgen.o \
+ 	sftp-realpath.o platform-pledge.o platform-tracing.o platform-misc.o \
+-	sshbuf-io.o
++	sshbuf-io.o pathnames.o
+
+ SKOBJS=	ssh-sk-client.o
+
+diff --git a/pathnames.c b/pathnames.c
+new file mode 100644
+index 000000000..5a148e909
+--- /dev/null
++++ b/pathnames.c
+@@ -0,0 +1,54 @@
++#include <stdio.h>
++#include <string.h>
++#include <libgen.h>
++#include <linux/limits.h>
++#include <unistd.h>
++#include <stdlib.h>
++
++#include "pathnames.h"
++
++char *resolve_system_path(char *path)
++{
++    static char base_dir[PATH_MAX] = {0};
++    int len = -1;
++
++    if (strlen(base_dir) == 0)
++    {
++        len = readlink("/proc/self/exe", base_dir, sizeof(base_dir) - 1);
++        if (len == -1)
++        {
++            goto fail;
++        }
++
++        int scount = 0;
++        while (len > 0)
++        {
++            if (base_dir[len] == '/')
++            {
++                scount++;
++                if (scount == 2)
++                {
++                    base_dir[len] = '\0';
++                    break;
++                }
++            }
++            len--;
++        }
++
++        if (scount < 2)
++        {
++            goto fail;
++        }
++    }
++
++    char *new_path = malloc(strlen(path) + len + 1);
++    strcpy(new_path, base_dir);
++    strcat(new_path, "/");
++    strcat(new_path, path);
++    return new_path;
++
++fail:
++    fprintf(stderr, "error resolving path: %s\n", path);
++    exit(1);
++    return NULL;
++}
+diff --git a/pathnames.h b/pathnames.h
+index f7ca5a75a..a99ef2a2e 100644
+--- a/pathnames.h
++++ b/pathnames.h
+@@ -12,6 +12,11 @@
+  * called by a name other than "ssh" or "Secure Shell".
+  */
+
++#ifndef PATHNAMES_H
++#define PATHNAMES_H
++
++char* resolve_system_path (char*);
++
+ #define ETCDIR				"/etc"
+
+ #ifndef SSHDIR
+@@ -44,7 +49,7 @@
+ #define _PATH_DH_MODULI			SSHDIR "/moduli"
+
+ #ifndef _PATH_SSH_PROGRAM
+-#define _PATH_SSH_PROGRAM		"/usr/bin/ssh"
++#define _PATH_SSH_PROGRAM		resolve_system_path("bin/ssh")
+ #endif
+
+ /*
+@@ -121,22 +126,22 @@
+  * Default location of askpass
+  */
+ #ifndef _PATH_SSH_ASKPASS_DEFAULT
+-#define _PATH_SSH_ASKPASS_DEFAULT	"/usr/X11R6/bin/ssh-askpass"
++#define _PATH_SSH_ASKPASS_DEFAULT	resolve_system_path("libexec/ssh-askpass")
+ #endif
+
+ /* Location of ssh-keysign for hostbased authentication */
+ #ifndef _PATH_SSH_KEY_SIGN
+-#define _PATH_SSH_KEY_SIGN		"/usr/libexec/ssh-keysign"
++#define _PATH_SSH_KEY_SIGN		resolve_system_path("libexec/ssh-keysign")
+ #endif
+
+ /* Location of ssh-pkcs11-helper to support keys in tokens */
+ #ifndef _PATH_SSH_PKCS11_HELPER
+-#define _PATH_SSH_PKCS11_HELPER		"/usr/libexec/ssh-pkcs11-helper"
++#define _PATH_SSH_PKCS11_HELPER		resolve_system_path("libexec/ssh-pkcs11-helper")
+ #endif
+
+ /* Location of ssh-sk-helper to support keys in security keys */
+ #ifndef _PATH_SSH_SK_HELPER
+-#define _PATH_SSH_SK_HELPER		"/usr/libexec/ssh-sk-helper"
++#define _PATH_SSH_SK_HELPER		resolve_system_path("libexec/ssh-sk-helper")
+ #endif
+
+ /* xauth for X11 forwarding */
+@@ -156,7 +161,7 @@
+
+ /* for sftp */
+ #ifndef _PATH_SFTP_SERVER
+-#define _PATH_SFTP_SERVER		"/usr/libexec/sftp-server"
++#define _PATH_SFTP_SERVER		resolve_system_path("libexec/sftp-server")
+ #endif
+
+ /* chroot directory for unprivileged user when UsePrivilegeSeparation=yes */
+@@ -177,3 +182,5 @@
+ #ifndef ASKPASS_PROGRAM
+ #define ASKPASS_PROGRAM         "/usr/lib/ssh/ssh-askpass"
+ #endif /* ASKPASS_PROGRAM */
++
++#endif
+diff --git a/scp.c b/scp.c
+index 492dace12..0059a33f5 100644
+--- a/scp.c
++++ b/scp.c
+@@ -173,7 +173,7 @@ int throughlocal = 1;
+ int sshport = -1;
+
+ /* This is the program to execute for the secured connection. ("ssh" or -S) */
+-char *ssh_program = _PATH_SSH_PROGRAM;
++char *ssh_program;
+
+ /* This is used to store the pid of ssh_program */
+ pid_t do_cmd_pid = -1;
+@@ -491,6 +491,7 @@ main(int argc, char **argv)
+ 	argv = newargv;
+
+ 	__progname = ssh_get_progname(argv[0]);
++	ssh_program = _PATH_SSH_PROGRAM;
+
+ 	log_init(argv0, log_level, SYSLOG_FACILITY_USER, 2);
+
