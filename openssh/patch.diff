@@ -29,7 +29,7 @@ new file mode 100644
 index 000000000..5a148e909
 --- /dev/null
 +++ b/pathnames.c
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,58 @@
 +#include <stdio.h>
 +#include <string.h>
 +#include <libgen.h>
@@ -73,7 +73,11 @@ index 000000000..5a148e909
 +        }
 +    }
 +
-+    char *new_path = malloc(strlen(path) + len + 1);
++    char *new_path = malloc(strlen(path) + len + 2);
++    if (!new_path) {
++        goto fail;
++    }
++
 +    strcpy(new_path, base_dir);
 +    strcat(new_path, "/");
 +    strcat(new_path, path);
