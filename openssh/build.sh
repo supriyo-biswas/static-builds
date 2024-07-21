@@ -52,8 +52,8 @@ build_task() {
         exit 1
     fi
 
+    rm "$PREFIX/libexec/sftp-server" "$PREFIX/libexec/sshd-session"
     find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec strip {} +
-    rm "$PREFIX/libexec/sftp-server"
 
     tar --numeric-owner -C "$PREFIX" -czf "$output_file" bin libexec
 }
@@ -143,7 +143,7 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=9.7p1
+    VERSION=9.8p1
 
     mkdir -p downloads releases
     wget -nv -N -P downloads \
