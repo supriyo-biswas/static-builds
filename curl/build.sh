@@ -107,7 +107,7 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=8.8.0
+    VERSION=8.9.1
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://curl.se/download/curl-$VERSION.tar.gz"

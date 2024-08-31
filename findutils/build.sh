@@ -132,7 +132,7 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=4.9.0
+    VERSION=4.10.0
 
     mkdir -p downloads releases
     wget -nv -N -P downloads \
