@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -eu
+# shellcheck disable=SC3040
+set -euo pipefail
 
 build_task() {
     output_file="/releases/rsync-$VERSION-linux-$(uname -m).tar.gz"
@@ -128,7 +129,7 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/rsync/build.sh sanity_check
+            "$image" /bin/bash /work/rsync/build.sh sanity_check
     done
 }
 

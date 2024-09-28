@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -eu
+# shellcheck disable=SC3040
+set -euo pipefail
 
 build_task() {
     output_file="/releases/openssh-$VERSION-linux-$(uname -m).tar.gz"
@@ -137,13 +138,13 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/openssh/build.sh sanity_check
+            "$image" /bin/bash /work/openssh/build.sh sanity_check
     done
 }
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=9.8p1
+    VERSION=9.9p1
 
     mkdir -p downloads releases
     wget -nv -N -P downloads \

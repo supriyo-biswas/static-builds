@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -eu
+# shellcheck disable=SC3040
+set -euo pipefail
 
 symlink_dups() {
     prev_file=''
@@ -154,6 +155,15 @@ build_platform() {
     wget -nv -N -P downloads https://github.com/certifi/python-certifi/raw/master/certifi/cacert.pem
 
     for image in $TEST_IMAGES; do
+        case "$image" in
+            alpine:*|busybox:*)
+                shell=/bin/sh
+                ;;
+            *)
+                shell=/bin/bash
+                ;;
+        esac
+
         docker run \
             -it \
             --rm \
@@ -161,14 +171,14 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/git/build.sh sanity_check
+            "$image" $shell /work/git/build.sh sanity_check
     done
 }
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=2.46.0
-    CURL_VERSION=8.9.1
+    VERSION=2.46.2
+    CURL_VERSION=8.10.1
 
     mkdir -p downloads releases
 

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -eu
+# shellcheck disable=SC3040
+set -euo pipefail
 
 build_task() {
     output_file="/releases/findutils-$VERSION-linux-$(uname -m).tar.gz"
@@ -119,6 +120,15 @@ build_platform() {
     # shellcheck disable=SC1091
     . ./common/constants.sh
     for image in $TEST_IMAGES; do
+        case "$image" in
+            alpine:*|busybox:*)
+                shell=/bin/sh
+                ;;
+            *)
+                shell=/bin/bash
+                ;;
+        esac
+
         docker run \
             -it \
             --rm \
@@ -126,7 +136,7 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /work/findutils/build.sh sanity_check
+            "$image" $shell /work/findutils/build.sh sanity_check
     done
 }
 

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -eu
+# shellcheck disable=SC3040
+set -euo pipefail
 
 build_task() {
     output_file="/releases/curl-$VERSION-linux-$(uname -m).tar.gz"
@@ -92,6 +93,15 @@ build_platform() {
     wget -nv -N -P downloads https://github.com/certifi/python-certifi/raw/master/certifi/cacert.pem
 
     for image in $TEST_IMAGES; do
+        case "$image" in
+            alpine:*|busybox:*)
+                shell=/bin/sh
+                ;;
+            *)
+                shell=/bin/bash
+                ;;
+        esac
+
         docker run \
             -it \
             --rm \
@@ -101,13 +111,13 @@ build_platform() {
             -e "REF_URL=$REF_URL" \
             -e "REF_SHA256=$REF_SHA256" \
             -e "VERSION=$VERSION" \
-            "$image" /work/curl/build.sh sanity_check
+            "$image" $shell /work/curl/build.sh sanity_check
     done
 }
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=8.9.1
+    VERSION=8.10.1
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://curl.se/download/curl-$VERSION.tar.gz"
