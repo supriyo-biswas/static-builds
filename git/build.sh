@@ -1,33 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
-
-symlink_dups() {
-    prev_file=''
-    prev_hash=''
-
-    find "$1" -type f -print0 | \
-        xargs -0 sha256sum | \
-        sort | \
-        uniq -w64 -d --all-repeated=separate | \
-        while read -r line; do
-        hash=$(echo "$line" | awk '{ print $1; }')
-        if [ "$line" = '' ]; then
-            prev_hash=''
-            continue
-        fi
-
-        if [ "$prev_hash" = '' ]; then
-            prev_hash="$hash"
-            prev_file=$(echo "$line" | awk '{ print $2; }')
-            continue
-        fi
-
-        file=$(echo "$line" | awk '{ print $2; }')
-        ln -srf "$prev_file" "$file"
-    done
-}
 
 build_task() {
     output_file="/releases/git-$VERSION-linux-$(uname -m).tar.gz"
@@ -101,6 +74,8 @@ build_task() {
         nulls="$nulls\\x00"
     done
 
+    # shellcheck disable=SC1091
+    . /work/common/functions.sh
     symlink_dups "$PREFIX"
 
     find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec file --mime-type {} + | \
@@ -148,7 +123,7 @@ build_platform() {
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
         -e CURL_VERSION="$CURL_VERSION" \
-        alpine:3 /work/git/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/git/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -177,8 +152,8 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=2.47.1
-    CURL_VERSION=8.11.0
+    VERSION=2.49.0
+    CURL_VERSION=8.13.0
 
     mkdir -p downloads releases
 

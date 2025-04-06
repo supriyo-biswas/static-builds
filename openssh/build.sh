@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
 
 build_task() {
@@ -126,7 +125,7 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/openssh/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/openssh/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -138,13 +137,13 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" /bin/bash /work/openssh/build.sh sanity_check
+            "$image" sh -c "apk add bash; /work/openssh/build.sh sanity_check"
     done
 }
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=9.9p1
+    VERSION=9.9p2
 
     mkdir -p downloads releases
     wget -nv -N -P downloads \

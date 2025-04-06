@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
 
 build_task() {
@@ -30,7 +29,7 @@ build_task() {
     make install
 
     if ldd "$PREFIX/bin/find"; then
-        echo "ssh is not statically linked"
+        echo "find is not statically linked"
         exit 1
     fi
 
@@ -115,7 +114,7 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/findutils/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/findutils/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh

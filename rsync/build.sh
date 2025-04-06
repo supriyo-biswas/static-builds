@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
 
 build_task() {
@@ -117,7 +116,7 @@ build_platform() {
         -e VERSION="$VERSION" \
         -e LZ4_VERSION="$LZ4_VERSION" \
         -e XXHASH_VERSION="$XXHASH_VERSION" \
-        alpine:3 /work/rsync/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/rsync/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -135,8 +134,8 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=3.3.0
-    LZ4_VERSION=1.9.4
+    VERSION=3.4.1
+    LZ4_VERSION=1.10.0
     XXHASH_VERSION=0.8.2
 
     mkdir -p downloads releases

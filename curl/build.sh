@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
 
 build_task() {
@@ -74,6 +73,11 @@ sanity_check() {
         echo "curl failed to download the reference file"
         exit 1
     fi
+
+    if ! "$curl" -sSf --compressed https://cloudflare.com/cdn-cgi/trace | grep -Fq http=http/2; then
+        echo "curl was somehow built without working http/2 support"
+        exit 1
+    fi
 }
 
 build_platform() {
@@ -84,7 +88,7 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/curl/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/curl/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -117,7 +121,7 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=8.11.0
+    VERSION=8.13.0
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://curl.se/download/curl-$VERSION.tar.gz"

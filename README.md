@@ -10,4 +10,7 @@ In Golang, it is possible to create an executable that works on the target OS an
 
 Head over to the [releases](https://github.com/supriyo-biswas/static-builds/releases) to download the binaries.
 
-If you use the `curl` or `wget` commands from this project, you need to add a certificate bundle to `/etc/ssl/cert.pem` when downloading HTTPS content, otherwise you will face errors. You can use [python-certifi's certificate bundle](https://raw.githubusercontent.com/certifi/python-certifi/master/certifi/cacert.pem) for this purpose.
+Some binaries have some special requirements:
+
+* `curl`/`wget`/`git`: To download HTTPS content, you need to add a certificate bundle into `/etc/ssl/cert.pem`, such as the one from [python-certifi](https://raw.githubusercontent.com/certifi/python-certifi/master/certifi/cacert.pem). Without this, you will face certificate errors.
+* `procps-ng`: The `top` command depends on a terminfo database being available at `/etc/terminfo`, `/usr/lib/terminfo` or `/usr/share/terminfo`. Alternatively, use `ps`, `kill` and friends from the same package, which do not have this limitation.

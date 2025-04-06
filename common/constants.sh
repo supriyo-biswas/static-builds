@@ -1,4 +1,4 @@
-#!/bin/sh
+# shellcheck shell=bash
 
 export REF_URL=https://www.gnu.org/software/bash/manual/bash.html
 

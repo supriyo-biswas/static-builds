@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# shellcheck disable=SC3040
 set -euo pipefail
 
 build_task() {
@@ -71,7 +70,7 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -e VERSION="$VERSION" \
-        alpine:3 /work/wget/build.sh build_task
+        alpine:3 sh -c "apk add bash; /work/wget/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -104,7 +103,7 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=1.24.5
+    VERSION=1.25.0
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://ftp.gnu.org/gnu/wget/wget-$VERSION.tar.gz"
