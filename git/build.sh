@@ -152,8 +152,8 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=2.49.0
-    CURL_VERSION=8.13.0
+    VERSION=2.50.1
+    CURL_VERSION=8.15.0
 
     mkdir -p downloads releases
 
