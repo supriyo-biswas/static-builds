@@ -17,6 +17,9 @@ build_task() {
     tar -xf "/work/downloads/bash-$VERSION.tar.gz"
     cd "/bash-$VERSION"
     patch -p1 < /work/bash/patch.diff
+    for i in {1..3}; do
+        patch -p0 < "/work/downloads/bash${VERSION/./}-00$i"
+    done
 
     PREFIX="/opt/bash-$VERSION"
 
@@ -97,10 +100,13 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=5.2.37
+    VERSION=5.3
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://ftp.gnu.org/gnu/bash/bash-$VERSION.tar.gz"
+    for i in {1..3}; do
+        wget -nv -N -P downloads "https://ftp.gnu.org/gnu/bash/bash-$VERSION-patches/bash${VERSION/./}-00$i"
+    done
 
     build_platform linux/amd64
     build_platform linux/arm64

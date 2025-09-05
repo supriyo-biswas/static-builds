@@ -1,16 +1,3 @@
-diff --git a/lib/intl/dcigettext.c b/lib/intl/dcigettext.c
-index c0f347e..4ccf8dc 100644
---- a/lib/intl/dcigettext.c
-+++ b/lib/intl/dcigettext.c
-@@ -154,7 +154,7 @@ extern int errno;
- char *getwd ();
- #  define getcwd(buf, max) getwd (buf)
- # else
--char *getcwd ();
-+// char *getcwd ();
- # endif
- # ifndef HAVE_STPCPY
- static char *stpcpy PARAMS ((char *dest, const char *src));
 diff --git a/lib/termcap/tparam.c b/lib/termcap/tparam.c
 index c4bff08..3e2ffd5 100644
 --- a/lib/termcap/tparam.c
