@@ -52,7 +52,7 @@ sanity_check() {
     install_dir=$(mktemp -d /opt/XXXXXXXXXX)
     coreutils="$install_dir/bin/coreutils"
 
-    tar -C "$install_dir" -xf "/releases/coreutils-$VERSION-linux-$(uname -m).tar.gz"
+    tar -C "$install_dir" -xf "/releases/gnu-coreutils-$VERSION-linux-$(uname -m).tar.gz"
     set -x
     "$coreutils" --version | grep -Fq "coreutils (GNU coreutils) $VERSION"
     "$install_dir/bin/ls" -la "$install_dir/bin" > /tmp/ls_results.txt
@@ -71,7 +71,7 @@ build_platform() {
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
         -v "static-builds-cache-${1/\//-}:/var/cache/apk" \
-        alpine:3 sh -c "apk add --cache-dir /var/cache/apk bash; /work/coreutils/build.sh build_task"
+        alpine:3 sh -c "apk add --cache-dir /var/cache/apk bash; /work/gnu-coreutils/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -92,7 +92,7 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" $shell /work/coreutils/build.sh sanity_check
+            "$image" $shell /work/gnu-coreutils/build.sh sanity_check
     done
 }
 
