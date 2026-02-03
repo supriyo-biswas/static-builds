@@ -14,7 +14,8 @@ build_task() {
 
     apk add --cache-dir /var/cache/apk \
         build-base \
-        clang
+        clang \
+        pkgconfig
 
     export CC=clang
 
@@ -29,7 +30,7 @@ build_task() {
 
     tar -xf "/work/downloads/grep-$VERSION.tar.gz"
     cd "/grep-$VERSION"
-    LDFLAGS="-static"  PKG_CONFIG="pkg-config --static" ./configure \
+    LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure \
         --prefix="$PREFIX" \
         --disable-rpath
 
