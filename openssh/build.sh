@@ -54,7 +54,7 @@ build_task() {
         exit 1
     fi
 
-    rm "$PREFIX/libexec/sftp-server" "$PREFIX/libexec/sshd-session"
+    rm "$PREFIX/libexec/sftp-server" "$PREFIX/libexec/sshd-session" "$PREFIX/libexec/sshd-auth"
     find "$PREFIX/bin" "$PREFIX/libexec" -type f -exec strip {} +
 
     tar --numeric-owner -C "$PREFIX" -czf "$output_file" bin libexec
@@ -81,17 +81,25 @@ sanity_check() {
 
     cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
     chmod 400 ~/.ssh/authorized_keys
-
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends openssh-server
     mkdir -p /run/sshd
+
+    if grep -qE 'rhel|fedora' /etc/os-release; then
+        yum install -y openssh-server procps
+    elif grep -q alpine /etc/os-release; then
+        apk add openssh-server
+    else
+        apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-server
+    fi
+
+    ssh-keygen -A
     /usr/sbin/sshd
     sleep 3
 
     "$ssh_keyscan" localhost > ~/.ssh/known_hosts
 
     # Kerberos/GSSAPI is not available in our build
-    unlink /etc/ssh/ssh_config
+    unlink /etc/ssh/ssh_config || true
     if ! (timeout 5 "$ssh" root@localhost uptime | grep -q "load average"); then
         echo "ssh failed to connect to localhost"
         exit 1
@@ -131,7 +139,7 @@ build_platform() {
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
-    for image in $TEST_SSH_IMAGES; do
+    for image in $TEST_IMAGES; do
         docker run \
             -it \
             --rm \
@@ -139,7 +147,7 @@ build_platform() {
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
             -e "VERSION=$VERSION" \
-            "$image" sh -c "apk add --cache-dir /var/cache/apk bash; /work/openssh/build.sh sanity_check"
+            "$image" sh -c "grep -q alpine /etc/os-release && apk add bash; /work/openssh/build.sh sanity_check"
     done
 }
 

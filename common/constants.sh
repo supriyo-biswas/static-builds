@@ -10,13 +10,8 @@ export TEST_IMAGES="
     debian:testing
     alpine:latest
     fedora:latest
-"
-
-
-export TEST_SSH_IMAGES="
-    ubuntu:latest
-    ubuntu:devel
-    debian:latest
-    debian:oldstable
-    debian:testing
+    rockylinux/rockylinux:8
+    rockylinux/rockylinux:9
+    almalinux:8
+    almalinux:9
 "

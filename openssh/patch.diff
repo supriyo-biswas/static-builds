@@ -1,9 +1,9 @@
 diff --git a/Makefile.in b/Makefile.in
-index e1b77ebc6..743f84732 100644
+index ba17a79..b8f8b47 100644
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -34,13 +34,6 @@ TEST_SHELL=@TEST_SHELL@
- BUILDDIR=@abs_top_builddir@
+@@ -36,14 +36,6 @@ SK_STANDALONE=@SK_STANDALONE@
+ COMPATINCLUDES="$(BUILDDIR)/@COMPATINCLUDES@"
  
  PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 -	-D_PATH_SSH_PROGRAM=\"$(SSH_PROGRAM)\" \
@@ -11,21 +11,22 @@ index e1b77ebc6..743f84732 100644
 -	-D_PATH_SFTP_SERVER=\"$(SFTP_SERVER)\" \
 -	-D_PATH_SSH_KEY_SIGN=\"$(SSH_KEYSIGN)\" \
 -	-D_PATH_SSHD_SESSION=\"$(SSHD_SESSION)\" \
+-	-D_PATH_SSHD_AUTH=\"$(SSHD_AUTH)\" \
 -	-D_PATH_SSH_PKCS11_HELPER=\"$(SSH_PKCS11_HELPER)\" \
 -	-D_PATH_SSH_SK_HELPER=\"$(SSH_SK_HELPER)\" \
  	-D_PATH_SSH_PIDDIR=\"$(piddir)\" \
  	-D_PATH_PRIVSEP_CHROOT_DIR=\"$(PRIVSEP_PATH)\"
  
-@@ -113,7 +106,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
+@@ -107,7 +99,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
  	kexgexc.o kexgexs.o \
- 	kexsntrup761x25519.o sntrup761.o kexgen.o \
+ 	kexsntrup761x25519.o kexmlkem768x25519.o sntrup761.o kexgen.o \
  	sftp-realpath.o platform-pledge.o platform-tracing.o platform-misc.o \
--	sshbuf-io.o
-+	sshbuf-io.o pathnames.o
+-	sshbuf-io.o misc-agent.o
++	sshbuf-io.o misc-agent.o pathnames.o
  
- SKOBJS=	ssh-sk-client.o
+ P11OBJS= ssh-pkcs11-client.o
  
-@@ -313,7 +306,7 @@ distclean:	regressclean
+@@ -335,7 +327,7 @@ distclean:	regressclean
  	rm -f *.o *.a $(TARGETS) logintest config.cache config.log
  	rm -f *.out core opensshd.init openssh.xml
  	rm -f Makefile buildpkg.sh config.h config.status
@@ -36,7 +37,7 @@ index e1b77ebc6..743f84732 100644
  	rm -f regress/mkdtemp
 diff --git a/pathnames.c b/pathnames.c
 new file mode 100644
-index 000000000..2c4868e10
+index 0000000..2c4868e
 --- /dev/null
 +++ b/pathnames.c
 @@ -0,0 +1,58 @@
@@ -99,7 +100,7 @@ index 000000000..2c4868e10
 +    return NULL;
 +}
 diff --git a/pathnames.h b/pathnames.h
-index 61c5f8467..87a1bee68 100644
+index 0dcc495..d0ab1d2 100644
 --- a/pathnames.h
 +++ b/pathnames.h
 @@ -12,6 +12,11 @@
@@ -114,7 +115,7 @@ index 61c5f8467..87a1bee68 100644
  #define ETCDIR				"/etc"
  
  #ifndef SSHDIR
-@@ -44,12 +49,12 @@
+@@ -42,15 +47,15 @@
  #define _PATH_DH_MODULI			SSHDIR "/moduli"
  
  #ifndef _PATH_SSH_PROGRAM
@@ -127,9 +128,13 @@ index 61c5f8467..87a1bee68 100644
 -#define _PATH_SSHD_SESSION		"/usr/libexec/sshd-session"
 +#define _PATH_SSHD_SESSION		resolve_system_path("libexec/sshd-session")
  #endif
+ #ifndef _PATH_SSHD_AUTH
+-#define _PATH_SSHD_AUTH			"/usr/libexec/sshd-auth"
++#define _PATH_SSHD_AUTH			resolve_system_path("libexec/sshd-auth")
+ #endif
  
  /*
-@@ -126,22 +131,22 @@
+@@ -132,22 +137,22 @@
   * Default location of askpass
   */
  #ifndef _PATH_SSH_ASKPASS_DEFAULT
@@ -156,7 +161,7 @@ index 61c5f8467..87a1bee68 100644
  #endif
  
  /* xauth for X11 forwarding */
-@@ -161,7 +166,7 @@
+@@ -167,7 +172,7 @@
  
  /* for sftp */
  #ifndef _PATH_SFTP_SERVER
@@ -165,26 +170,26 @@ index 61c5f8467..87a1bee68 100644
  #endif
  
  /* chroot directory for unprivileged user when UsePrivilegeSeparation=yes */
-@@ -182,3 +187,5 @@
+@@ -188,3 +193,5 @@
  #ifndef ASKPASS_PROGRAM
  #define ASKPASS_PROGRAM         "/usr/lib/ssh/ssh-askpass"
  #endif /* ASKPASS_PROGRAM */
 +
 +#endif
 diff --git a/scp.c b/scp.c
-index 0779c3c2b..e91c87ead 100644
+index c5f573c..041f2b6 100644
 --- a/scp.c
 +++ b/scp.c
-@@ -173,7 +173,7 @@ int throughlocal = 1;
+@@ -157,7 +157,7 @@ int throughlocal = 1;
  int sshport = -1;
  
- /* This is the program to execute for the secured connection. ("ssh" or -S) */
+ /* This is the program to execute for the secure connection. ("ssh" or -S) */
 -char *ssh_program = _PATH_SSH_PROGRAM;
 +char *ssh_program;
  
  /* This is used to store the pid of ssh_program */
  pid_t do_cmd_pid = -1;
-@@ -493,6 +493,7 @@ main(int argc, char **argv)
+@@ -477,6 +477,7 @@ main(int argc, char **argv)
  	argv = newargv;
  
  	__progname = ssh_get_progname(argv[0]);
