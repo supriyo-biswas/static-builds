@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+VERSION=3.4.1
+LZ4_VERSION=1.10.0
+XXHASH_VERSION=0.8.2
+
 build_task() {
     output_file="/releases/rsync-$VERSION-linux-$(uname -m).tar.gz"
     if [ -f "$output_file" ]; then
@@ -9,7 +13,7 @@ build_task() {
         exit 0
     fi
 
-    apk add \
+    apk add --cache-dir /var/cache/apk \
         build-base \
         clang \
         linux-headers \
@@ -113,10 +117,8 @@ build_platform() {
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
-        -e VERSION="$VERSION" \
-        -e LZ4_VERSION="$LZ4_VERSION" \
-        -e XXHASH_VERSION="$XXHASH_VERSION" \
-        alpine:3 sh -c "apk add bash; /work/rsync/build.sh build_task"
+        -v "static-builds-cache-${1/\//-}:/var/cache/apk" \
+        alpine:3 sh -c "apk add --cache-dir /var/cache/apk bash; /work/rsync/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -134,9 +136,6 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=3.4.1
-    LZ4_VERSION=1.10.0
-    XXHASH_VERSION=0.8.2
 
     mkdir -p downloads releases
     wget -nv -N -P downloads \

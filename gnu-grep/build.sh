@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+VERSION=3.12
+PCRE2_VERSION=10.47
+
 build_task() {
     output_file="/releases/gnu-grep-$VERSION-linux-$(uname -m).tar.gz"
     if [ -f "$output_file" ]; then
@@ -9,7 +12,7 @@ build_task() {
         exit 0
     fi
 
-    apk add \
+    apk add --cache-dir /var/cache/apk \
         build-base \
         clang
 
@@ -63,9 +66,8 @@ build_platform() {
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
-        -e VERSION="$VERSION" \
-        -e PCRE2_VERSION="$PCRE2_VERSION" \
-        alpine:3 sh -c "apk add bash; /work/gnu-grep/build.sh build_task"
+        -v "static-builds-cache-${1/\//-}:/var/cache/apk" \
+        alpine:3 sh -c "apk add --cache-dir /var/cache/apk bash; /work/gnu-grep/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -92,8 +94,6 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=3.11
-    PCRE2_VERSION=10.45
 
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://ftp.gnu.org/gnu/grep/grep-$VERSION.tar.gz"

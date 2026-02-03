@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+VERSION=1.37.0
+
 build_task() {
     output_file="/releases/busybox-minimal-$VERSION-linux-$(uname -m).tar.gz"
     if [ -f "$output_file" ]; then
@@ -45,7 +47,6 @@ build_platform() {
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
-        -e VERSION="$VERSION" \
         ubuntu:24.04 /work/busybox-minimal/build.sh build_task
 
     # shellcheck disable=SC1091
@@ -73,8 +74,6 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=1.37.0
-
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://busybox.net/downloads/busybox-$VERSION.tar.bz2"
 

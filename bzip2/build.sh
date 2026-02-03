@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+VERSION=1.0.8
+
 build_task() {
     output_file="/releases/bzip2-$VERSION-linux-$(uname -m).tar.gz"
     if [ -f "$output_file" ]; then
@@ -9,7 +11,7 @@ build_task() {
         exit 0
     fi
 
-    apk add \
+    apk add --cache-dir /var/cache/apk \
         build-base \
         clang \
         coreutils \
@@ -64,8 +66,8 @@ build_platform() {
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
         -v "$PWD/releases:/releases" \
-        -e VERSION="$VERSION" \
-        alpine:3 sh -c "apk add bash; /work/bzip2/build.sh build_task"
+        -v "static-builds-cache-${1/\//-}:/var/cache/apk" \
+        alpine:3 sh -c "apk add --cache-dir /var/cache/apk bash; /work/bzip2/build.sh build_task"
 
     # shellcheck disable=SC1091
     . ./common/constants.sh
@@ -92,8 +94,6 @@ build_platform() {
 
 main() {
     cd "$(dirname "$0")/.."
-    VERSION=1.0.8
-
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://sourceware.org/pub/bzip2/bzip2-$VERSION.tar.gz"
 
