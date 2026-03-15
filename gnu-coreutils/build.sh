@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=9.9
+VERSION=9.10
 
 build_task() {
     output_file="/releases/gnu-coreutils-$VERSION-linux-$(uname -m).tar.gz"

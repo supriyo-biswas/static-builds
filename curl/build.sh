@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=8.18.0
+VERSION=8.19.0
 
 build_task() {
     output_file="/releases/curl-$VERSION-linux-$(uname -m).tar.gz"

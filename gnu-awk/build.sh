@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=5.3.2
+VERSION=5.4.0
 
 build_task() {
     output_file="/releases/gnu-awk-$VERSION-linux-$(uname -m).tar.gz"
