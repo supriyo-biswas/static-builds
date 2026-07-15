@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=4.9
+VERSION=4.10
 
 build_task() {
     output_file="/releases/gnu-sed-$VERSION-linux-$(uname -m).tar.gz"
@@ -13,7 +13,8 @@ build_task() {
 
     apk add --cache-dir /var/cache/apk \
         build-base \
-        clang
+        clang \
+        linux-headers
 
     tar -xf "/work/downloads/sed-$VERSION.tar.gz"
     cd "/sed-$VERSION"

@@ -3,9 +3,10 @@
 set -euo pipefail
 
 VERSION=5.3
+PATCH_LEVEL=15
 
 build_task() {
-    output_file="/releases/bash-$VERSION-linux-$(uname -m).tar.gz"
+    output_file="/releases/bash-$VERSION-p$PATCH_LEVEL-linux-$(uname -m).tar.gz"
     if [ -f "$output_file" ]; then
         echo "File $output_file already exists, no need to build"
         exit 0
@@ -19,8 +20,11 @@ build_task() {
     tar -xf "/work/downloads/bash-$VERSION.tar.gz"
     cd "/bash-$VERSION"
     patch -p1 < /work/bash/patch.diff
-    for i in {1..3}; do
-        patch -p0 < "/work/downloads/bash${VERSION/./}-00$i"
+    i=1
+    while [ "$i" -le "$PATCH_LEVEL" ]; do
+        patch_number=$(printf '%03d' "$i")
+        patch -p0 < "/work/downloads/bash${VERSION/./}-$patch_number"
+        i=$((i + 1))
     done
 
     PREFIX="/opt/bash-$VERSION"
@@ -50,9 +54,9 @@ sanity_check() {
     install_dir=$(mktemp -d /opt/XXXXXXXXXX)
     bash="$install_dir/bin/bash"
 
-    tar -C "$install_dir" -xf "/releases/bash-$VERSION-linux-$(uname -m).tar.gz"
+    tar -C "$install_dir" -xf "/releases/bash-$VERSION-p$PATCH_LEVEL-linux-$(uname -m).tar.gz"
     set -x
-    "$bash" --version | grep -qE "^GNU bash, version"
+    "$bash" --version | grep -Fq "GNU bash, version $VERSION.$PATCH_LEVEL("
 
     cat << EOM > /tmp/1.sh
 #!bash
@@ -95,6 +99,7 @@ build_platform() {
             --platform "$1" \
             -v "$PWD:/work:ro,delegated" \
             -v "$PWD/releases:/releases" \
+            -e "PATCH_LEVEL=$PATCH_LEVEL" \
             -e "VERSION=$VERSION" \
             "$image" $shell /work/bash/build.sh sanity_check
     done
@@ -104,8 +109,12 @@ main() {
     cd "$(dirname "$0")/.."
     mkdir -p downloads releases
     wget -nv -N -P downloads "https://ftp.gnu.org/gnu/bash/bash-$VERSION.tar.gz"
-    for i in {1..3}; do
-        wget -nv -N -P downloads "https://ftp.gnu.org/gnu/bash/bash-$VERSION-patches/bash${VERSION/./}-00$i"
+    i=1
+    while [ "$i" -le "$PATCH_LEVEL" ]; do
+        patch_number=$(printf '%03d' "$i")
+        wget -nv -O "downloads/bash${VERSION/./}-$patch_number" \
+            "https://ftp.gnu.org/gnu/bash/bash-$VERSION-patches/bash${VERSION/./}-$patch_number"
+        i=$((i + 1))
     done
 
     build_platform linux/amd64
