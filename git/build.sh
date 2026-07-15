@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-VERSION=2.53.0
-CURL_VERSION=8.19.0
+VERSION=2.55.0
+CURL_VERSION=8.21.0
 
 build_task() {
     output_file="/releases/git-$VERSION-linux-$(uname -m).tar.gz"
@@ -16,8 +16,10 @@ build_task() {
         sed \
         coreutils \
         build-base \
+        cargo \
         clang \
         file \
+        linux-headers \
         openssl-dev \
         openssl-libs-static \
         nghttp2-dev \

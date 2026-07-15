@@ -17,24 +17,15 @@ index ba17a79..b8f8b47 100644
  	-D_PATH_SSH_PIDDIR=\"$(piddir)\" \
  	-D_PATH_PRIVSEP_CHROOT_DIR=\"$(PRIVSEP_PATH)\"
  
-@@ -107,7 +99,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
+@@ -110,7 +102,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
  	kexgexc.o kexgexs.o \
  	kexsntrup761x25519.o kexmlkem768x25519.o sntrup761.o kexgen.o \
  	sftp-realpath.o platform-pledge.o platform-tracing.o platform-misc.o \
--	sshbuf-io.o misc-agent.o
-+	sshbuf-io.o misc-agent.o pathnames.o
+-	sshbuf-io.o misc-agent.o ssherr-libcrypto.o
++	sshbuf-io.o misc-agent.o ssherr-libcrypto.o pathnames.o
  
  P11OBJS= ssh-pkcs11-client.o
  
-@@ -335,7 +327,7 @@ distclean:	regressclean
- 	rm -f *.o *.a $(TARGETS) logintest config.cache config.log
- 	rm -f *.out core opensshd.init openssh.xml
- 	rm -f Makefile buildpkg.sh config.h config.status
--	rm -f survey.sh openbsd-compat/regress/Makefile *~ 
-+	rm -f survey.sh openbsd-compat/regress/Makefile *~
- 	rm -rf autom4te.cache
- 	rm -f regress/check-perm
- 	rm -f regress/mkdtemp
 diff --git a/pathnames.c b/pathnames.c
 new file mode 100644
 index 0000000..2c4868e
