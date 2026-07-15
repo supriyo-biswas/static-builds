@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=4.10.0
+VERSION=4.11.0
 
 build_task() {
     output_file="/releases/findutils-$VERSION-linux-$(uname -m).tar.gz"
