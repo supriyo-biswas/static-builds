@@ -16,6 +16,7 @@ build_task() {
         clang \
         openssl-dev \
         pcre-dev \
+        pcre-static \
         zlib-dev \
         perl \
         openssl-libs-static \

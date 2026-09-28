@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=1.14
+VERSION=1.15
 
 build_task() {
     output_file="/releases/gzip-$VERSION-linux-$(uname -m).tar.gz"
@@ -17,6 +17,10 @@ build_task() {
 
     tar -xf "/work/downloads/gzip-$VERSION.tar.gz"
     cd "/gzip-$VERSION"
+
+    # gzip.h defines a `head` macro. Include signal.h first on AArch64,
+    # where the system header also declares a field named `head`.
+    sed -i '/^#include "gzip\.h"$/i #include <signal.h>' gzip.c
 
     PREFIX="/opt/gzip-$VERSION"
 

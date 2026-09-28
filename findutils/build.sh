@@ -67,7 +67,7 @@ sanity_check() {
         echo "$i" > "/home/testuser/dir1/dir2/file$i"
     done
 
-    chown -R testuser: /home/testuser/dir1
+    chown -R testuser:testuser /home/testuser/dir1
 
     output=$("$find" /home/testuser/dir1 -type f -printf '%u:%g %p %s\n' | sort)
     expected_output=$(cat <<EOM

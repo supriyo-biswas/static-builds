@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=4.0.6
+VERSION=4.0.7
 
 build_task() {
     output_file="/releases/procps-ng-$VERSION-linux-$(uname -m).tar.gz"

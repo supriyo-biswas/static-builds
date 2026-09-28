@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-VERSION=3.4.1
+VERSION=3.5.1
 LZ4_VERSION=1.10.0
-XXHASH_VERSION=0.8.2
+XXHASH_VERSION=0.8.4
 
 build_task() {
     output_file="/releases/rsync-$VERSION-linux-$(uname -m).tar.gz"
@@ -24,14 +24,18 @@ build_task() {
         attr-dev \
         attr-static \
         acl-dev \
-        acl-static
+        acl-static \
+        libidn2-dev \
+        libidn2-static \
+        libunistring-dev \
+        libunistring-static
 
     export CC=clang
 
     tar -xf "/work/downloads/xxhash/v$XXHASH_VERSION.tar.gz"
     cd "/xxHash-$XXHASH_VERSION"
     LDFLAGS=-static make
-    MAKE_DIR=/usr make install
+    PREFIX=/usr make install
     cd ..
 
     tar -xf "/work/downloads/lz4/v$LZ4_VERSION.tar.gz"
@@ -45,7 +49,7 @@ build_task() {
 
     PREFIX="/opt/rsync-$VERSION"
 
-    LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure \
+    LIBS=-lunistring LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure \
         --prefix="$PREFIX" \
         --enable-ipv6 \
         --with-included-zlib \
@@ -85,9 +89,13 @@ sanity_check() {
     /usr/sbin/sshd
     sleep 3
 
-    adduser --disabled-password --gecos "" testuser
+    if command -v useradd > /dev/null; then
+        useradd -m -p "" -s /bin/bash testuser
+    else
+        adduser --disabled-password --gecos "" testuser
+    fi
 
-    mkdir /home/testuser/.ssh ~/.ssh
+    mkdir -p /home/testuser/.ssh ~/.ssh
     ssh-keyscan localhost > /home/testuser/.ssh/known_hosts
     ssh-keygen -t rsa -f /home/testuser/.ssh/id_rsa -N ""
     cp /home/testuser/.ssh/id_rsa.pub ~/.ssh/authorized_keys
