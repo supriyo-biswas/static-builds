@@ -1,0 +1,44 @@
+name: Make release
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project directory to build
+        required: true
+        type: string
+      override_version:
+        description: Optional tag and release version override
+        required: false
+        default: ""
+        type: string
+      prerelease:
+        description: Mark the GitHub release as a prerelease
+        required: true
+        default: false
+        type: boolean
+      publish:
+        description: Create the tag and GitHub release
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  registered:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Show requested test
+        env:
+          PROJECT: ${{ inputs.project }}
+          OVERRIDE_VERSION: ${{ inputs.override_version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          echo "The release workflow is registered on the default branch."
+          echo "Run it with --ref ci-test to exercise the implementation."
+          echo "project=$PROJECT"
+          echo "override_version=$OVERRIDE_VERSION"
+          echo "prerelease=$PRERELEASE"
+          echo "publish=$PUBLISH"
