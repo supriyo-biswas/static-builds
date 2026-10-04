@@ -7,6 +7,15 @@ on:
         description: Project directory to build
         required: true
         type: string
+      arch:
+        description: Architecture to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - amd64
+          - arm64
       override_version:
         description: Optional tag and release version override
         required: false
@@ -31,6 +40,7 @@ jobs:
     steps:
       - name: Show requested test
         env:
+          ARCH: ${{ inputs.arch }}
           PROJECT: ${{ inputs.project }}
           OVERRIDE_VERSION: ${{ inputs.override_version }}
           PRERELEASE: ${{ inputs.prerelease }}
@@ -39,6 +49,7 @@ jobs:
           echo "The release workflow is registered on the default branch."
           echo "Run it with --ref ci-test to exercise the implementation."
           echo "project=$PROJECT"
+          echo "arch=$ARCH"
           echo "override_version=$OVERRIDE_VERSION"
           echo "prerelease=$PRERELEASE"
           echo "publish=$PUBLISH"
