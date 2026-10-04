@@ -115,8 +115,12 @@ main() {
         i=$((i + 1))
     done
 
-    build_platform linux/amd64
-    build_platform linux/arm64
+    case "${ARCH:-all}" in
+        all) build_platform linux/amd64; build_platform linux/arm64 ;;
+        amd64) build_platform linux/amd64 ;;
+        arm64) build_platform linux/arm64 ;;
+        *) echo "ARCH must be one of: all, amd64, arm64" >&2; exit 1 ;;
+    esac
 }
 
 if [ -z ${1+x} ]; then
