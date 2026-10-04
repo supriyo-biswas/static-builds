@@ -74,7 +74,6 @@ EOM
 
 build_platform() {
     docker run \
-        -it \
         --rm \
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
@@ -95,7 +94,6 @@ build_platform() {
         esac
 
         docker run \
-            -it \
             --rm \
             --platform "$1" \
             -v "$PWD:/work:ro,delegated" \
