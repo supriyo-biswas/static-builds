@@ -7,15 +7,6 @@ on:
         description: Project directory to build
         required: true
         type: string
-      arch:
-        description: Architecture to build
-        required: true
-        default: all
-        type: choice
-        options:
-          - all
-          - amd64
-          - arm64
       override_version:
         description: Optional tag and release version override
         required: false
@@ -55,7 +46,6 @@ jobs:
         id: prepare
         shell: bash
         env:
-          ARCH: ${{ inputs.arch }}
           OVERRIDE_VERSION: ${{ inputs.override_version }}
           PROJECT: ${{ inputs.project }}
           PUBLISH: ${{ inputs.publish }}
@@ -71,21 +61,7 @@ jobs:
             exit 1
           fi
 
-          case "$ARCH" in
-            all)
-              matrix='{"include":[{"arch":"amd64","runner":"ubuntu-24.04"},{"arch":"arm64","runner":"ubuntu-24.04-arm"}]}'
-              ;;
-            amd64)
-              matrix='{"include":[{"arch":"amd64","runner":"ubuntu-24.04"}]}'
-              ;;
-            arm64)
-              matrix='{"include":[{"arch":"arm64","runner":"ubuntu-24.04-arm"}]}'
-              ;;
-            *)
-              echo "Invalid architecture: $ARCH" >&2
-              exit 1
-              ;;
-          esac
+          matrix='{"include":[{"arch":"amd64","runner":"ubuntu-24.04"},{"arch":"arm64","runner":"ubuntu-24.04-arm"}]}'
 
           mapfile -t version_lines < <(sed -n 's/^VERSION=//p' "$PROJECT/build.sh")
           if (( ${#version_lines[@]} != 1 )); then
@@ -133,7 +109,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           echo "Project: $PROJECT"
-          echo "Architecture: $ARCH"
+          echo "Architectures: amd64, arm64"
           echo "Configured build version: $configured_version"
           echo "Release version: $effective_version"
           echo "Release tag: $tag"
@@ -208,7 +184,6 @@ jobs:
       - name: Create tag and release
         shell: bash
         env:
-          ARCH: ${{ inputs.arch }}
           CONFIGURED_VERSION: ${{ needs.prepare.outputs.configured_version }}
           EFFECTIVE_VERSION: ${{ needs.prepare.outputs.effective_version }}
           GH_TOKEN: ${{ github.token }}
@@ -224,12 +199,7 @@ jobs:
             exit 1
           fi
 
-          case "$ARCH" in
-            all) machines=(x86_64 aarch64) ;;
-            amd64) machines=(x86_64) ;;
-            arm64) machines=(aarch64) ;;
-            *) echo "Invalid architecture: $ARCH" >&2; exit 1 ;;
-          esac
+          machines=(x86_64 aarch64)
 
           artifacts=()
           for machine in "${machines[@]}"; do

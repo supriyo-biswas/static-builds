@@ -25,7 +25,6 @@ workflow artifact for seven days, but no tag or GitHub release is created.
 gh workflow run make-release.yml \
     --ref master \
     -f project=gzip \
-    -f arch=all \
     -f publish=false
 ```
 
@@ -38,7 +37,6 @@ an existing production tag.
 gh workflow run make-release.yml \
     --ref master \
     -f project=gzip \
-    -f arch=all \
     -f override_version=1.15-test.1 \
     -f prerelease=true \
     -f publish=true
@@ -54,7 +52,7 @@ For a normal release, omit `override_version`, set `prerelease=false`, and set
 `publish=true`. Publishing fails without changing anything if the derived tag
 already exists.
 
-The `arch` input accepts `all`, `amd64`, or `arm64`. Selecting `all` runs the
-two builds in parallel on native x64 and ARM64 GitHub-hosted runners. The build
-scripts accept the same selection locally through the `ARCH` environment
-variable, for example `ARCH=amd64 ./gzip/build.sh`.
+The workflow always builds both architectures in parallel on native x64 and
+ARM64 GitHub-hosted runners. Build scripts default to both architectures when
+run manually, and accept `ARCH=all`, `ARCH=amd64`, or `ARCH=arm64` when a
+single selection is useful, for example `ARCH=amd64 ./gzip/build.sh`.
