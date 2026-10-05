@@ -23,22 +23,207 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.project }}
+  cancel-in-progress: false
+
 jobs:
-  registered:
+  prepare:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      artifact_prefix: ${{ steps.prepare.outputs.artifact_prefix }}
+      configured_version: ${{ steps.prepare.outputs.configured_version }}
+      effective_version: ${{ steps.prepare.outputs.effective_version }}
+      matrix: ${{ steps.prepare.outputs.matrix }}
+      tag: ${{ steps.prepare.outputs.tag }}
     steps:
-      - name: Show requested test
+      - name: Check out the dispatched revision
+        uses: actions/checkout@v7
+
+      - name: Validate release parameters
+        id: prepare
+        shell: bash
         env:
-          PROJECT: ${{ inputs.project }}
           OVERRIDE_VERSION: ${{ inputs.override_version }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          PROJECT: ${{ inputs.project }}
           PUBLISH: ${{ inputs.publish }}
         run: |
-          echo "The release workflow is registered on the default branch."
-          echo "Run it with --ref ci-test to exercise the implementation."
-          echo "project=$PROJECT"
-          echo "override_version=$OVERRIDE_VERSION"
-          echo "prerelease=$PRERELEASE"
-          echo "publish=$PUBLISH"
+          set -euo pipefail
+
+          if [[ ! "$PROJECT" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+            echo "Invalid project name: $PROJECT" >&2
+            exit 1
+          fi
+          if [[ ! -f "$PROJECT/build.sh" ]]; then
+            echo "Project does not exist or has no build script: $PROJECT" >&2
+            exit 1
+          fi
+
+          matrix='{"include":[{"arch":"amd64","runner":"ubuntu-24.04"},{"arch":"arm64","runner":"ubuntu-24.04-arm"}]}'
+
+          mapfile -t version_lines < <(sed -n 's/^VERSION=//p' "$PROJECT/build.sh")
+          if (( ${#version_lines[@]} != 1 )); then
+            echo "Expected exactly one VERSION assignment in $PROJECT/build.sh" >&2
+            exit 1
+          fi
+
+          configured_version=${version_lines[0]}
+          if [[ "$configured_version" == \"*\" && "$configured_version" == *\" ]]; then
+            configured_version=${configured_version:1:-1}
+          elif [[ "$configured_version" == \'*\' && "$configured_version" == *\' ]]; then
+            configured_version=${configured_version:1:-1}
+          fi
+          if [[ -z "$configured_version" || "$configured_version" =~ [[:space:]] ]]; then
+            echo "Invalid configured version: $configured_version" >&2
+            exit 1
+          fi
+
+          effective_version=${OVERRIDE_VERSION:-$configured_version}
+          if [[ ! "$effective_version" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]]; then
+            echo "Invalid release version: $effective_version" >&2
+            exit 1
+          fi
+          tag="$PROJECT-$effective_version"
+          if ! git check-ref-format "refs/tags/$tag"; then
+            echo "Invalid release tag: $tag" >&2
+            exit 1
+          fi
+
+          if [[ "$PUBLISH" == true ]]; then
+            existing_tag=$(git ls-remote --tags origin "refs/tags/$tag")
+            if [[ -n "$existing_tag" ]]; then
+              echo "Tag already exists: $tag" >&2
+              exit 1
+            fi
+          fi
+
+          artifact_prefix="release-$tag-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          {
+            echo "artifact_prefix=$artifact_prefix"
+            echo "configured_version=$configured_version"
+            echo "effective_version=$effective_version"
+            echo "matrix=$matrix"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Project: $PROJECT"
+          echo "Architectures: amd64, arm64"
+          echo "Configured build version: $configured_version"
+          echo "Release version: $effective_version"
+          echo "Release tag: $tag"
+          echo "Publish: $PUBLISH"
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the dispatched revision
+        uses: actions/checkout@v7
+
+      - name: Build and test
+        env:
+          ARCH: ${{ matrix.arch }}
+          PROJECT: ${{ inputs.project }}
+        run: ./"$PROJECT"/build.sh
+
+      - name: Verify build artifact
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+          PROJECT: ${{ inputs.project }}
+          CONFIGURED_VERSION: ${{ needs.prepare.outputs.configured_version }}
+        run: |
+          set -euo pipefail
+          case "$ARCH" in
+            amd64) machine=x86_64 ;;
+            arm64) machine=aarch64 ;;
+            *) echo "Invalid matrix architecture: $ARCH" >&2; exit 1 ;;
+          esac
+          artifact="releases/$PROJECT-$CONFIGURED_VERSION-linux-$machine.tar.gz"
+          if [[ ! -s "$artifact" ]]; then
+            echo "Missing or empty build artifact: $artifact" >&2
+            exit 1
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ needs.prepare.outputs.artifact_prefix }}-${{ matrix.arch }}
+          path: releases/${{ inputs.project }}-${{ needs.prepare.outputs.configured_version }}-linux-*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    if: ${{ inputs.publish }}
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the dispatched revision
+        uses: actions/checkout@v7
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ needs.prepare.outputs.artifact_prefix }}-*
+          path: releases
+          merge-multiple: true
+
+      - name: Create tag and release
+        shell: bash
+        env:
+          CONFIGURED_VERSION: ${{ needs.prepare.outputs.configured_version }}
+          EFFECTIVE_VERSION: ${{ needs.prepare.outputs.effective_version }}
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          PROJECT: ${{ inputs.project }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          existing_tag=$(git ls-remote --tags origin "refs/tags/$TAG")
+          if [[ -n "$existing_tag" ]]; then
+            echo "Tag already exists: $TAG" >&2
+            exit 1
+          fi
+
+          machines=(x86_64 aarch64)
+
+          artifacts=()
+          for machine in "${machines[@]}"; do
+            artifact="releases/$PROJECT-$CONFIGURED_VERSION-linux-$machine.tar.gz"
+            if [[ ! -s "$artifact" ]]; then
+              echo "Missing or empty release artifact: $artifact" >&2
+              exit 1
+            fi
+            artifacts+=("$artifact")
+          done
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" \
+            -f sha="$GITHUB_SHA"
+
+          release_args=(
+            "$TAG"
+            "${artifacts[@]}"
+            --verify-tag
+            --latest=false
+            --title "$TAG"
+            --notes "Static $PROJECT $CONFIGURED_VERSION builds from $GITHUB_SHA. Release label: $EFFECTIVE_VERSION."
+          )
+          if [[ "$PRERELEASE" == true ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${release_args[@]}"

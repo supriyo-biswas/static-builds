@@ -110,7 +110,6 @@ EOM
 
 build_platform() {
     docker run \
-        -it \
         --rm \
         --platform "$1" \
         -v "$PWD:/work:ro,delegated" \
@@ -131,7 +130,6 @@ build_platform() {
         esac
 
         docker run \
-            -it \
             --rm \
             --platform "$1" \
             -v "$PWD:/work:ro,delegated" \
@@ -147,8 +145,12 @@ main() {
     wget -nv -N -P downloads \
         "https://ftp.gnu.org/gnu/findutils/findutils-$VERSION.tar.xz"
 
-    build_platform linux/amd64
-    build_platform linux/arm64
+    case "${ARCH:-all}" in
+        all) build_platform linux/amd64; build_platform linux/arm64 ;;
+        amd64) build_platform linux/amd64 ;;
+        arm64) build_platform linux/arm64 ;;
+        *) echo "ARCH must be one of: all, amd64, arm64" >&2; exit 1 ;;
+    esac
 }
 
 if [ -z ${1+x} ]; then

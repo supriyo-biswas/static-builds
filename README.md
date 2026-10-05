@@ -14,3 +14,45 @@ Some binaries have some special requirements:
 
 * `curl`/`wget`/`git`: To download HTTPS content, you need to add a certificate bundle into `/etc/ssl/cert.pem`, such as the one from [python-certifi](https://raw.githubusercontent.com/certifi/python-certifi/master/certifi/cacert.pem). Without this, you will face certificate errors.
 * `procps-ng`: The `top` command depends on a terminfo database being available at `/etc/terminfo`, `/usr/lib/terminfo` or `/usr/share/terminfo`. Alternatively, use `ps`, `kill` and friends from the same package, which do not have this limitation.
+
+## Making releases
+
+The `make-release.yml` workflow builds and tests one project at the requested Git
+revision. By default it is a dry run: the resulting archives are available as a
+workflow artifact for seven days, but no tag or GitHub release is created.
+
+```sh
+gh workflow run make-release.yml \
+    --ref master \
+    -f project=gzip \
+    -f publish=false
+```
+
+Set `publish=true` to create a tag and release. The version normally comes from
+the project's `build.sh`; `override_version` changes only the tag and release
+label, which is useful for testing the complete publishing path without moving
+an existing production tag.
+
+```sh
+gh workflow run make-release.yml \
+    --ref master \
+    -f project=gzip \
+    -f override_version=1.15-test.1 \
+    -f prerelease=true \
+    -f publish=true
+```
+
+After checking a test release, delete both it and its tag with:
+
+```sh
+gh release delete gzip-1.15-test.1 --cleanup-tag --yes
+```
+
+For a normal release, omit `override_version`, set `prerelease=false`, and set
+`publish=true`. Publishing fails without changing anything if the derived tag
+already exists.
+
+The workflow always builds both architectures in parallel on native x64 and
+ARM64 GitHub-hosted runners. Build scripts default to both architectures when
+run manually, and accept `ARCH=all`, `ARCH=amd64`, or `ARCH=arm64` when a
+single selection is useful, for example `ARCH=amd64 ./gzip/build.sh`.
