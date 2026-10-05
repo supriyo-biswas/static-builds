@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=5.3.15
+VERSION=5.3.20
 BASE_VERSION=${VERSION%.*}
 PATCH_LEVEL=${VERSION##*.}
 
