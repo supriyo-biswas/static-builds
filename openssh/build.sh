@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=10.5p1
+VERSION=10.6p2
 
 build_task() {
     output_file="/releases/openssh-$VERSION-linux-$(uname -m).tar.gz"

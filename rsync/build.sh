@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=3.5.1
+VERSION=3.5.2
 LZ4_VERSION=1.10.0
 XXHASH_VERSION=0.8.4
 
